@@ -190,13 +190,13 @@ void handle_offline(atransport *t)
     t->RunDisconnects();
 }
 
-#if DEBUG_PACKETS
+#if 1 //DEBUG_PACKETS
 #define DUMPMAX 32
 void print_packet(const char *label, apacket *p)
 {
     const char* tag;
-    unsigned count;
-
+//    unsigned count;
+    char buf[128];
     switch(p->msg.command){
     case A_SYNC: tag = "SYNC"; break;
     case A_CNXN: tag = "CNXN" ; break;
@@ -211,8 +211,13 @@ void print_packet(const char *label, apacket *p)
     default: tag = "????"; break;
     }
 
-    fprintf(stderr, "%s: %s %08x %08x %04x \"",
+
+    sprintf(buf, "%s: %s %08x %08x %04x \"",
             label, tag, p->msg.arg0, p->msg.arg1, p->msg.data_length);
+
+   LOG(WARNING) << buf;
+
+/*
     count = p->msg.data_length;
     const char* x = p->payload.data();
     if (count > DUMPMAX) {
@@ -221,6 +226,7 @@ void print_packet(const char *label, apacket *p)
     } else {
         tag = "\"\n";
     }
+
     while (count-- > 0) {
         if ((*x >= ' ') && (*x < 127)) {
             fputc(*x, stderr);
@@ -230,6 +236,7 @@ void print_packet(const char *label, apacket *p)
         x++;
     }
     fputs(tag, stderr);
+*/
 }
 #endif
 
@@ -402,11 +409,14 @@ void handle_packet(apacket *p, atransport *t)
             ((char*) (&(p->msg.command)))[1],
             ((char*) (&(p->msg.command)))[2],
             ((char*) (&(p->msg.command)))[3]);
-    print_packet("recv", p);
+    //print_packet("recv", p);
     CHECK_EQ(p->payload.size(), p->msg.data_length);
 
     switch(p->msg.command){
     case A_CNXN:  // CONNECT(version, maxdata, "system-id-string")
+        LOG(WARNING) << "JDB: handle_packet: Got A_CNXN!";
+        print_packet("recv", p);
+
         handle_new_connection(t, p);
         break;
     case A_STLS:  // TLS(version, "")
@@ -455,6 +465,7 @@ void handle_packet(apacket *p, atransport *t)
                 break;
 #endif
             default:
+		LOG(WARNING) << "JDB: handle_packet: got A_AUTH but invalid subcmd: " << p->msg.arg0;
                 t->SetConnectionState(kCsOffline);
                 handle_offline(t);
                 break;

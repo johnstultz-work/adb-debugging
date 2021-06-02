@@ -164,7 +164,7 @@ struct UsbFfsConnection : public Connection {
     }
 
     ~UsbFfsConnection() {
-        LOG(INFO) << "UsbFfsConnection being destroyed";
+        PLOG(WARNING) << "UsbFfsConnection being destroyed";
         Stop();
         monitor_thread_.join();
 
@@ -333,6 +333,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_DISABLE:
+			LOG(WARNING) << "JDB: event FUNCTIONFS_DISABLE";
                         if (!bound) {
                             LOG(WARNING) << "received FUNCTIONFS_DISABLE while not bound?";
                         }
@@ -346,6 +347,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_UNBIND:
+			LOG(WARNING) << "JDB: event FUNCTIONFS_UNBIND";
                         if (enabled) {
                             LOG(WARNING) << "received FUNCTIONFS_UNBIND while still enabled?";
                         }

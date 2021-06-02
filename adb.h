@@ -185,7 +185,7 @@ void put_apacket(apacket* p);
 // Define it if you want to dump packets.
 #define DEBUG_PACKETS 0
 
-#if !DEBUG_PACKETS
+#if 0 // !DEBUG_PACKETS
 #define print_packet(tag, p) \
     do {                     \
     } while (0)
