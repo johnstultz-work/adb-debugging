@@ -386,6 +386,9 @@ static void handle_new_connection(atransport* t, apacket* p) {
     ADB_LOG(Connection) << "received CNXN: version=" << p->msg.arg0 << ", maxdata = " << p->msg.arg1
                         << ", banner = '" << banner << "'";
 
+    LOG(ERROR) << "JDB: received CNXN: version=" << p->msg.arg0 << ", maxdata = " << p->msg.arg1
+                        << ", banner = '" << banner << "'";
+
     if (t->use_tls) {
         // We still handshake in TLS mode. If auth_required is disabled,
         // we'll just not verify the client's certificate. This should be the

@@ -300,6 +300,7 @@ struct UsbFfsConnection : public Connection {
 
                 switch (event.type) {
                     case FUNCTIONFS_BIND:
+			LOG(WARNING) << "JDB: event FUNCTIONFS_BIND";
                         if (bound) {
                             LOG(WARNING) << "received FUNCTIONFS_BIND while already bound?";
                             running = false;
@@ -316,6 +317,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_ENABLE:
+			LOG(WARNING) << "JDB: event FUNCTIONFS_ENABLE";
                         if (!bound) {
                             LOG(WARNING) << "received FUNCTIONFS_ENABLE while not bound?";
                             running = false;
@@ -361,6 +363,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_SETUP: {
+			LOG(WARNING) << "JDB: event FUNCTIONFS_SETUP";
                         LOG(INFO) << "received FUNCTIONFS_SETUP control transfer: bRequestType = "
                                   << static_cast<int>(event.u.setup.bRequestType)
                                   << ", bRequest = " << static_cast<int>(event.u.setup.bRequest)
@@ -434,6 +437,7 @@ struct UsbFfsConnection : public Connection {
         if (!worker_started_) {
             return;
         }
+	LOG(WARNING) << "JDB: StopWorker()";
 
         pthread_t worker_thread_handle = worker_thread_.native_handle();
         while (true) {
@@ -538,7 +542,7 @@ struct UsbFfsConnection : public Connection {
 
         // Notification for completed reads can be received out of order.
         if (block->id().id != needed_read_id_) {
-            LOG(VERBOSE) << "read " << block->id().id << " completed while waiting for "
+            LOG(ERROR) << "JDB: HandleRead read " << block->id().id << " completed while waiting for "
                          << needed_read_id_;
             return true;
         }
@@ -568,14 +572,59 @@ struct UsbFfsConnection : public Connection {
                 amessage& msg = incoming_header_.emplace();
                 memcpy(&msg, block->payload.data(), sizeof(msg));
                 LOG(DEBUG) << "USB read:" << dump_header(&msg);
+//                LOG(ERROR) << "JDB: ProcessRead Filling header: blk id:" << block->id().id << "blk payload size: " << block->payload.size();
+//		LOG(ERROR) << "JDB: ProcessRead dump_header: " << dump_header(&msg);
                 incoming_header_ = msg;
             } else {
                 size_t bytes_left = incoming_header_->data_length - incoming_payload_.size();
+
+		
+		LOG(ERROR) << "JDB: ProcessRead  Filling 'incoming' payload id: " << block->id().id << " blk payload size: " << block->payload.size();
+		LOG(ERROR) << "JDB: ProcessRead  header data_length: " << incoming_header_->data_length << " 'incoming' payload size: " << incoming_payload_.size() << " bytes_left: " << bytes_left;
+		LOG(ERROR) << "JDB: ProcessRead  dump_header: " << dump_header(&incoming_header_.value());
+		LOG(ERROR) << "JDB: ProcessRead  header magic: " << incoming_header_->magic << " trans: " << (incoming_header_->magic^0xffffffff) << " cmd: " << incoming_header_->command;
+
+		if (block->payload.size() == 35) {
+			std::string banner(block->payload.begin(), block->payload.end());
+			LOG(ERROR) << "JDB: banner: " << banner;
+
+		}
+
+		if (block->payload.size() == 24) {
+			LOG(ERROR) << "JDB: sus payload, looks like a header";
+			amessage msg;
+			memcpy(&msg, block->payload.data(), sizeof(msg));
+			LOG(ERROR) << "JDB: sus header: " << dump_header(&msg);
+#if 0
+			if (msg.data_length != 0) {
+				LOG(ERROR) << "JDB not just a header, so things are bad!";
+				CHECK_EQ(msg.data_length,  0u);
+			}
+
+			LOG(ERROR) << "JDB: submitting seemingly out of order block";
+
+			auto packet = std::make_unique<apacket>();
+			packet->msg = msg;
+			packet->payload = std::move(incoming_payload_).coalesce();
+			read_callback_(this, std::move(packet));
+#endif
+			LOG(ERROR) << "JDB: throwing out sus header";
+                	auto free_block = incoming_payload_.clear();
+			if (block->payload.capacity() == 0) {
+				block->payload = std::move(free_block);
+			}
+        		PrepareReadBlock(block, block->id().id + kUsbReadQueueDepth);
+		        SubmitRead(block);
+		        return true;
+		}
+
+
                 if (block->payload.size() > bytes_left) {
-                    HandleError("received too many bytes while waiting for payload");
-                    return false;
-                }
-                incoming_payload_.append(std::move(block->payload));
+		    LOG(ERROR) << "JDB: ProcessRead  ERROR: block payload size: " << block->payload.size() << " larger then bytes_left: " << bytes_left;
+		}
+                Block payload = std::move(block->payload);
+                CHECK_LE(payload.size(), bytes_left);
+                incoming_payload_.append(std::move(payload));
             }
 
             if (incoming_header_->data_length == incoming_payload_.size()) {
@@ -592,8 +641,11 @@ struct UsbFfsConnection : public Connection {
                 if (block->payload.capacity() == 0) {
                     block->payload = std::move(free_block);
                 }
+            }else {
+		LOG(ERROR) << "JDB: ProcessRead incoming_header->data_length != incoming_payload_.size() [" <<incoming_header_->data_length<<" vs " <<incoming_payload_.size() <<"]";
             }
-        }
+        } else
+	   LOG(ERROR) << "JDB: ProcessRead empty payload!";
 
         PrepareReadBlock(block, block->id().id + kUsbReadQueueDepth);
         SubmitRead(block);
@@ -679,6 +731,7 @@ struct UsbFfsConnection : public Connection {
     }
 
     void HandleError(const std::string& error) {
+	LOG(WARNING) << "JDB: HandleError()";
         std::call_once(error_flag_, [&]() {
             if (transport_) {
                 transport_->HandleError(error);
@@ -764,6 +817,7 @@ static void usb_ffs_open_thread() {
         transport->serial = "UsbFfs";
         std::promise<void> destruction_notifier;
         std::future<void> future = destruction_notifier.get_future();
+	LOG(WARNING) << "JDB: usb_ffs_open_thread: calling SetConnection";
         transport->SetConnection(std::make_unique<UsbFfsConnection>(
                 std::move(control), std::move(bulk_out), std::move(bulk_in),
                 std::move(destruction_notifier)));
