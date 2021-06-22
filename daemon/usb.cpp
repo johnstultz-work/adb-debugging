@@ -607,8 +607,8 @@ struct UsbFfsConnection : public Connection {
 			packet->msg = msg;
 			packet->payload = std::move(incoming_payload_).coalesce();
 			read_callback_(this, std::move(packet));
-#endif
-			LOG(ERROR) << "JDB: throwing out sus header";
+//#endif
+//			LOG(ERROR) << "JDB: throwing out sus header";
                 	auto free_block = incoming_payload_.clear();
 			if (block->payload.capacity() == 0) {
 				block->payload = std::move(free_block);
@@ -616,11 +616,14 @@ struct UsbFfsConnection : public Connection {
         		PrepareReadBlock(block, block->id().id + kUsbReadQueueDepth);
 		        SubmitRead(block);
 		        return true;
+#endif
 		}
-
 
                 if (block->payload.size() > bytes_left) {
 		    LOG(ERROR) << "JDB: ProcessRead  ERROR: block payload size: " << block->payload.size() << " larger then bytes_left: " << bytes_left;
+		    HandleError("received too many bytes while waiting for payload");
+		    return false;
+
 		}
                 Block payload = std::move(block->payload);
                 CHECK_LE(payload.size(), bytes_left);
