@@ -180,6 +180,7 @@ struct UsbFfsConnection : public Connection {
 
     virtual bool Write(std::unique_ptr<apacket> packet) override final {
         LOG(DEBUG) << "USB write: " << dump_header(&packet->msg);
+        LOG(ERROR) << "JDB: USB write: " << dump_header(&packet->msg);
         auto header = std::make_shared<Block>(sizeof(packet->msg));
         memcpy(header->data(), &packet->msg, sizeof(packet->msg));
 
@@ -200,6 +201,8 @@ struct UsbFfsConnection : public Connection {
                         CreateWriteBlock(payload, offset, write_size, next_write_id_++));
                 len -= write_size;
                 offset += write_size;
+		if (len > 0)
+			LOG(ERROR) << "JDB: USB write: fragmented write: " << write_size << " togo: " << len;
             }
         }
 
@@ -300,7 +303,7 @@ struct UsbFfsConnection : public Connection {
 
                 switch (event.type) {
                     case FUNCTIONFS_BIND:
-			LOG(WARNING) << "JDB: event FUNCTIONFS_BIND";
+//			LOG(WARNING) << "JDB: event FUNCTIONFS_BIND";
                         if (bound) {
                             LOG(WARNING) << "received FUNCTIONFS_BIND while already bound?";
                             running = false;
@@ -317,7 +320,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_ENABLE:
-			LOG(WARNING) << "JDB: event FUNCTIONFS_ENABLE";
+//			LOG(WARNING) << "JDB: event FUNCTIONFS_ENABLE";
                         if (!bound) {
                             LOG(WARNING) << "received FUNCTIONFS_ENABLE while not bound?";
                             running = false;
@@ -335,7 +338,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_DISABLE:
-			LOG(WARNING) << "JDB: event FUNCTIONFS_DISABLE";
+//			LOG(WARNING) << "JDB: event FUNCTIONFS_DISABLE";
                         if (!bound) {
                             LOG(WARNING) << "received FUNCTIONFS_DISABLE while not bound?";
                         }
@@ -349,7 +352,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_UNBIND:
-			LOG(WARNING) << "JDB: event FUNCTIONFS_UNBIND";
+//			LOG(WARNING) << "JDB: event FUNCTIONFS_UNBIND";
                         if (enabled) {
                             LOG(WARNING) << "received FUNCTIONFS_UNBIND while still enabled?";
                         }
@@ -363,7 +366,7 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_SETUP: {
-			LOG(WARNING) << "JDB: event FUNCTIONFS_SETUP";
+//			LOG(WARNING) << "JDB: event FUNCTIONFS_SETUP";
                         LOG(INFO) << "received FUNCTIONFS_SETUP control transfer: bRequestType = "
                                   << static_cast<int>(event.u.setup.bRequestType)
                                   << ", bRequest = " << static_cast<int>(event.u.setup.bRequest)
@@ -437,7 +440,7 @@ struct UsbFfsConnection : public Connection {
         if (!worker_started_) {
             return;
         }
-	LOG(WARNING) << "JDB: StopWorker()";
+//	LOG(WARNING) << "JDB: StopWorker()";
 
         pthread_t worker_thread_handle = worker_thread_.native_handle();
         while (true) {
@@ -572,8 +575,8 @@ struct UsbFfsConnection : public Connection {
                 amessage& msg = incoming_header_.emplace();
                 memcpy(&msg, block->payload.data(), sizeof(msg));
                 LOG(DEBUG) << "USB read:" << dump_header(&msg);
-//                LOG(ERROR) << "JDB: ProcessRead Filling header: blk id:" << block->id().id << "blk payload size: " << block->payload.size();
-//		LOG(ERROR) << "JDB: ProcessRead dump_header: " << dump_header(&msg);
+                LOG(ERROR) << "JDB: ProcessRead Filling header: blk id:" << block->id().id << "blk payload size: " << block->payload.size();
+		LOG(ERROR) << "JDB: ProcessRead dump_header: " << dump_header(&msg);
                 incoming_header_ = msg;
             } else {
                 size_t bytes_left = incoming_header_->data_length - incoming_payload_.size();
@@ -674,9 +677,12 @@ struct UsbFfsConnection : public Connection {
                 });
         CHECK(it != write_requests_.end());
 
+	struct iocb* io = &it->control;
+	LOG(ERROR) << "JDB: HandleWrite: reaping " << static_cast<void*>(io) << " len: " << io->aio_nbytes;
+
         write_requests_.erase(it);
         size_t outstanding_writes = --writes_submitted_;
-        LOG(DEBUG) << "USB write: reaped, down to " << outstanding_writes;
+        LOG(ERROR) << "JDB: HandleWrite: USB write: reaped, down to " << outstanding_writes;
     }
 
     IoWriteBlock CreateWriteBlock(std::shared_ptr<Block> payload, size_t offset, size_t len,
@@ -718,6 +724,8 @@ struct UsbFfsConnection : public Connection {
             CHECK(!write_requests_[writes_submitted_ + i].pending);
             write_requests_[writes_submitted_ + i].pending = true;
             iocbs[i] = &write_requests_[writes_submitted_ + i].control;
+	    LOG(ERROR) << "JDB: SubmitWrites submitting " << static_cast<void*>(iocbs[i]) << "len: " << iocbs[i]->aio_nbytes;
+
             LOG(VERBOSE) << "submitting write_request " << static_cast<void*>(iocbs[i]);
         }
 
