@@ -164,7 +164,7 @@ struct UsbFfsConnection : public Connection {
     }
 
     ~UsbFfsConnection() {
-        PLOG(WARNING) << "UsbFfsConnection being destroyed";
+        LOG(INFO) << "UsbFfsConnection being destroyed";
         Stop();
         monitor_thread_.join();
 
@@ -303,7 +303,6 @@ struct UsbFfsConnection : public Connection {
 
                 switch (event.type) {
                     case FUNCTIONFS_BIND:
-//			LOG(WARNING) << "JDB: event FUNCTIONFS_BIND";
                         if (bound) {
                             LOG(WARNING) << "received FUNCTIONFS_BIND while already bound?";
                             running = false;
@@ -320,7 +319,6 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_ENABLE:
-//			LOG(WARNING) << "JDB: event FUNCTIONFS_ENABLE";
                         if (!bound) {
                             LOG(WARNING) << "received FUNCTIONFS_ENABLE while not bound?";
                             running = false;
@@ -338,7 +336,6 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_DISABLE:
-//			LOG(WARNING) << "JDB: event FUNCTIONFS_DISABLE";
                         if (!bound) {
                             LOG(WARNING) << "received FUNCTIONFS_DISABLE while not bound?";
                         }
@@ -352,7 +349,6 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_UNBIND:
-//			LOG(WARNING) << "JDB: event FUNCTIONFS_UNBIND";
                         if (enabled) {
                             LOG(WARNING) << "received FUNCTIONFS_UNBIND while still enabled?";
                         }
@@ -366,7 +362,6 @@ struct UsbFfsConnection : public Connection {
                         break;
 
                     case FUNCTIONFS_SETUP: {
-//			LOG(WARNING) << "JDB: event FUNCTIONFS_SETUP";
                         LOG(INFO) << "received FUNCTIONFS_SETUP control transfer: bRequestType = "
                                   << static_cast<int>(event.u.setup.bRequestType)
                                   << ", bRequest = " << static_cast<int>(event.u.setup.bRequest)
@@ -440,7 +435,6 @@ struct UsbFfsConnection : public Connection {
         if (!worker_started_) {
             return;
         }
-//	LOG(WARNING) << "JDB: StopWorker()";
 
         pthread_t worker_thread_handle = worker_thread_.native_handle();
         while (true) {

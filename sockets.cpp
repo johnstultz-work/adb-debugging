@@ -256,7 +256,6 @@ struct ClosingSocket {
 static void deferred_close(unique_fd fd) {
     // Shutdown the socket in the outgoing direction only, so that
     // we don't have the same problem on the opposite end.
-    LOG(WARNING) << "JDB: deferred_close called!";
     adb_shutdown(fd.get(), SHUT_WR);
     auto callback = [](fdevent* fde, unsigned event, void* arg) {
         auto socket_info = static_cast<ClosingSocket*>(arg);
@@ -271,13 +270,13 @@ static void deferred_close(unique_fd fd) {
                 // There's potentially more data to read.
                 auto duration = std::chrono::steady_clock::now() - socket_info->begin;
                 if (duration > 1s) {
-                    LOG(WARNING) << "timeout expired while flushing socket, closing [1]";
+                    LOG(WARNING) << "timeout expired while flushing socket, closing";
                 } else {
                     return;
                 }
             }
         } else if (event & FDE_TIMEOUT) {
-            LOG(WARNING) << "timeout expired while flushing socket, closing [2]";
+            LOG(WARNING) << "timeout expired while flushing socket, closing";
         }
 
         // Either there was an error, we hit the end of the socket, or our timeout expired.
@@ -297,7 +296,6 @@ static void deferred_close(unique_fd fd) {
 // be sure to hold the socket list lock when calling this
 static void local_socket_destroy(asocket* s) {
     int exit_on_close = s->exit_on_close;
-    LOG(WARNING) << "JDB: local_socket_destroy called!";
 
     D("LS(%d): destroying fde.fd=%d", s->id, s->fd);
 
@@ -314,9 +312,6 @@ static void local_socket_destroy(asocket* s) {
 
 static void local_socket_close(asocket* s) {
     D("entered local_socket_close. LS(%d) fd=%d", s->id, s->fd);
-
-    LOG(WARNING) << "JDB: local_socket_close called!";
-
     std::lock_guard<std::recursive_mutex> lock(local_socket_list_lock);
     if (s->peer) {
         D("LS(%d): closing peer. peer->id=%d peer->fd=%d", s->id, s->peer->id, s->peer->fd);
@@ -337,7 +332,6 @@ static void local_socket_close(asocket* s) {
     */
     if (s->closing || s->has_write_error || s->packet_queue.empty()) {
         int id = s->id;
-	LOG(WARNING) << "JDB: local_socket_close: closing: " << s->closing << " write_error: " <<  s->has_write_error << " queue empty: " << s->packet_queue.empty();
         local_socket_destroy(s);
         D("LS(%d): closed", id);
         return;
