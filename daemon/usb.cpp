@@ -569,8 +569,8 @@ struct UsbFfsConnection : public Connection {
                 amessage& msg = incoming_header_.emplace();
                 memcpy(&msg, block->payload.data(), sizeof(msg));
                 LOG(DEBUG) << "USB read:" << dump_header(&msg);
-                LOG(ERROR) << "JDB: ProcessRead Filling header: blk id:" << block->id().id << "blk payload size: " << block->payload.size();
-		LOG(ERROR) << "JDB: ProcessRead dump_header: " << dump_header(&msg);
+//                LOG(ERROR) << "JDB: ProcessRead Filling header: blk id:" << block->id().id << "blk payload size: " << block->payload.size();
+//		LOG(ERROR) << "JDB: ProcessRead dump_header: " << dump_header(&msg);
                 incoming_header_ = msg;
             } else {
                 size_t bytes_left = incoming_header_->data_length - incoming_payload_.size();
@@ -671,12 +671,13 @@ struct UsbFfsConnection : public Connection {
                 });
         CHECK(it != write_requests_.end());
 
-	struct iocb* io = &it->control;
-	LOG(ERROR) << "JDB: HandleWrite: reaping " << static_cast<void*>(io) << " len: " << io->aio_nbytes;
+//	struct iocb* io = &it->control;
+//	LOG(ERROR) << "JDB: HandleWrite: reaping " << static_cast<void*>(io) << " len: " << io->aio_nbytes;
 
         write_requests_.erase(it);
         size_t outstanding_writes = --writes_submitted_;
-        LOG(ERROR) << "JDB: HandleWrite: USB write: reaped, down to " << outstanding_writes;
+        LOG(DEBUG) << "USB write: reaped, down to " << outstanding_writes;
+//        LOG(ERROR) << "JDB: HandleWrite: USB write: reaped, down to " << outstanding_writes;
     }
 
     IoWriteBlock CreateWriteBlock(std::shared_ptr<Block> payload, size_t offset, size_t len,
