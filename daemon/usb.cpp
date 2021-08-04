@@ -180,7 +180,7 @@ struct UsbFfsConnection : public Connection {
 
     virtual bool Write(std::unique_ptr<apacket> packet) override final {
         LOG(DEBUG) << "USB write: " << dump_header(&packet->msg);
-        LOG(ERROR) << "JDB: USB write: " << dump_header(&packet->msg);
+//        LOG(ERROR) << "JDB: USB write: " << dump_header(&packet->msg);
         auto header = std::make_shared<Block>(sizeof(packet->msg));
         memcpy(header->data(), &packet->msg, sizeof(packet->msg));
 
@@ -719,7 +719,7 @@ struct UsbFfsConnection : public Connection {
             CHECK(!write_requests_[writes_submitted_ + i].pending);
             write_requests_[writes_submitted_ + i].pending = true;
             iocbs[i] = &write_requests_[writes_submitted_ + i].control;
-	    LOG(ERROR) << "JDB: SubmitWrites submitting " << static_cast<void*>(iocbs[i]) << "len: " << iocbs[i]->aio_nbytes;
+//	    LOG(ERROR) << "JDB: SubmitWrites submitting " << static_cast<void*>(iocbs[i]) << "len: " << iocbs[i]->aio_nbytes;
 
             LOG(VERBOSE) << "submitting write_request " << static_cast<void*>(iocbs[i]);
         }

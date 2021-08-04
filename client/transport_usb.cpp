@@ -42,7 +42,7 @@
 // Call usb_read using a buffer having a multiple of usb_get_max_packet_size() bytes
 // to avoid overflow. See http://libusb.sourceforge.net/api-1.0/packetoverflow.html.
 static int UsbReadMessage(usb_handle* h, amessage* msg) {
-    D("UsbReadMessage");
+//    D("UsbReadMessage");
 
 #if CHECK_PACKET_OVERFLOW
     size_t usb_packet_size = usb_get_max_packet_size(h);
@@ -68,6 +68,9 @@ static int UsbReadPayload(usb_handle* h, apacket* p) {
     D("UsbReadPayload(%d)", p->msg.data_length);
 
     if (p->msg.data_length > MAX_PAYLOAD) {
+	D("UsbReadPayload(): JDB: bad length!  command: %u arg0: %u arg1: %u len: %u check %u magic: 0x%x (0x%x)", p->msg.command, p->msg.arg0, p->msg.arg1, p->msg.data_length, p->msg.data_check, p->msg.magic, p->msg.command^p->msg.data_length);
+
+
         return -1;
     }
 
@@ -110,7 +113,7 @@ static int remote_read(apacket* p, usb_handle* usb) {
     if (p->msg.data_length) {
         n = UsbReadPayload(usb, p);
         if (n < 0) {
-            D("remote usb: terminated (data)");
+            D("JDB: remote usb: terminated (data) expected: %u", p->msg.data_length);
             return -1;
         }
         if (static_cast<uint32_t>(n) != p->msg.data_length) {
